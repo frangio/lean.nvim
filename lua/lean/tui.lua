@@ -1001,6 +1001,9 @@ end
 ---The window displaying this renderer was closed, but the buffer lives on.
 ---Cleans up resources that are tied to the window (e.g. terminal graphics).
 function BufRenderer:detach_window()
+  -- Cleanup events must not navigate back to a window which is in the process
+  -- of closing (e.g. while `:tabonly` is closing an infoview's tab).
+  self.last_window = nil
   self:event 'clear_all' -- Ensure tooltips close.
   self.__overlays:close()
 end

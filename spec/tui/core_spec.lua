@@ -1030,6 +1030,38 @@ describe('Element', function()
 end)
 
 describe('BufRenderer', function()
+  describe(':detach_window', function()
+    it('does not jump to the detached window during cleanup', function()
+      local buffer = Buffer.create { scratch = true }
+      local element = Element:new {
+        events = {
+          clear_all = function(ctx)
+            ctx.jump_to_last_window()
+          end,
+        },
+      }
+      local renderer = element:renderer { buffer = buffer }
+      local jumped = false
+      renderer.last_window = {
+        is_valid = function()
+          return true
+        end,
+        bufnr = function()
+          return buffer.bufnr
+        end,
+        make_current = function()
+          jumped = true
+        end,
+      }
+
+      renderer:detach_window()
+
+      assert.is_false(jumped)
+      assert.is_nil(renderer.last_window)
+      buffer:force_delete()
+    end)
+  end)
+
   describe(':render', function()
     it('sets buffer lines from the element', function()
       local buffer = Buffer.create { scratch = true }
