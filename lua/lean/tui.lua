@@ -1001,11 +1001,21 @@ end
 ---The window displaying this renderer was closed, but the buffer lives on.
 ---Cleans up resources that are tied to the window (e.g. terminal graphics).
 function BufRenderer:detach_window()
-  -- Cleanup events must not navigate back to a window which is in the process
-  -- of closing (e.g. while `:tabonly` is closing an infoview's tab).
   self.last_window = nil
-  self:event 'clear_all' -- Ensure tooltips close.
+  self:clear_all_tooltips()
   self.__overlays:close()
+end
+
+---Close every open tooltip owned by this renderer.
+function BufRenderer:clear_all_tooltips()
+  self.tooltips = {}
+  -- Clear this before closing the tooltip because its own detach recursively
+  -- closes any tooltip below it.
+  local tooltip = self.tooltip
+  self.tooltip = nil
+  if tooltip then
+    tooltip:close()
+  end
 end
 
 function BufRenderer:close()
@@ -1665,15 +1675,7 @@ function BufRenderer:make_event_context(event_path)
       end
     end,
     clear_all_tooltips = function()
-      self.tooltips = {}
-      -- Close the open float directly rather than via `hover`; `close` re-fires
-      -- `clear_all` (through `detach_window`), so clear `self.tooltip` first to
-      -- keep that bounce from recursing back in here.
-      local tooltip = self.tooltip
-      self.tooltip = nil
-      if tooltip then
-        tooltip:close()
-      end
+      self:clear_all_tooltips()
     end,
   }
 end

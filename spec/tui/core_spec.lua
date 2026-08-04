@@ -1031,17 +1031,21 @@ end)
 
 describe('BufRenderer', function()
   describe(':detach_window', function()
-    it('does not jump to the detached window during cleanup', function()
+    it('only cleans up resources owned by the renderer', function()
       local buffer = Buffer.create { scratch = true }
+      local clear_all_called = false
       local element = Element:new {
         events = {
           clear_all = function(ctx)
+            clear_all_called = true
+            ctx.clear_all_tooltips()
             ctx.jump_to_last_window()
           end,
         },
       }
       local renderer = element:renderer { buffer = buffer }
       local jumped = false
+      local tooltip_closed = false
       renderer.last_window = {
         is_valid = function()
           return true
@@ -1053,10 +1057,20 @@ describe('BufRenderer', function()
           jumped = true
         end,
       }
+      renderer.tooltips.example = Element.text 'example'
+      renderer.tooltip = {
+        close = function()
+          tooltip_closed = true
+        end,
+      }
 
       renderer:detach_window()
 
+      assert.is_false(clear_all_called)
       assert.is_false(jumped)
+      assert.is_true(tooltip_closed)
+      assert.is_true(vim.tbl_isempty(renderer.tooltips))
+      assert.is_nil(renderer.tooltip)
       assert.is_nil(renderer.last_window)
       buffer:force_delete()
     end)
